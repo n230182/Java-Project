@@ -1,15 +1,11 @@
 package backend;
-
 import java.io.*;
-import java.util.Scanner;
 
-public class NGO {
+public class NGO{
     String email, password, name, mobile, govId;
     String state, district, city, pincode;
-
-    public NGO(String email, String password, String name, String mobile,
-               String govId, String state, String district, String city, String pincode) {
-
+    public NGO(String email, String password, String name, String mobile,String govId, String state, 
+        String district, String city, String pincode){
         this.email = email;
         this.password = password;
         this.name = name;
@@ -21,120 +17,113 @@ public class NGO {
         this.pincode = pincode;
     }
 
-    public void saveToFile() {
-        try {
-            FileWriter fw = new FileWriter("ngo.csv", true);
-
-            fw.write("\n"+email + "," + password + "," + name + "," + mobile + "," +
-                     govId + "," + state + "," + district + "," + city + "," + pincode);
-
+    public void saveToFile(){
+        try{
+            File file = new File("ngo.csv");
+            if(file.length() == 0){
+                FileWriter fw = new FileWriter(file, true);
+                fw.write("Email,Password,Name,Mobile,GovId,State,District,City,Pincode\n");
+                fw.close();
+            }
+            FileWriter fw = new FileWriter(file, true);
+            fw.write("\n"+ email + "," + password + "," + name + 
+                    "," + mobile + "," + govId + "," + state + "," 
+                    + district + "," + city + "," + pincode);
             fw.close();
-
-        } catch (IOException e) {
+        }
+        catch(IOException e){
             e.printStackTrace();
         }
     }
 
-    public static String loginNGO(String email, String password) {
-
+    public static String loginNGO(String email, String password){
         try (BufferedReader br = new BufferedReader(new FileReader("ngo.csv"))) {
-
             String line;
-
-            while ((line = br.readLine()) != null) {
-
-                if (line.isBlank()) continue;
-
+            while((line = br.readLine()) != null){
+                if(line.isBlank()) continue;
                 String[] data = line.split(",");
-
-                if (data.length < 9) continue;
-
-                if (data[0].equals(email) && data[1].equals(password)) {
-
-                    return data[2] + "," + data[7] + "," + data[3]; // name, city, mobile
+                if(data.length < 9) continue;
+                if(data[0].trim().equals(email.trim()) &&
+                    data[1].trim().equals(password.trim())){
+                    return data[2] + "," + data[7] + "," + data[6] + "," +
+                           data[5] + "," + data[8] + "," + data[3];
                 }
             }
-
-        } catch (IOException e) {
+        }
+        catch(IOException e){
             return null;
         }
-
         return null;
     }
 
-    public static String getReportsForNGO(String city){
-
-    StringBuilder emergency = new StringBuilder();
-    StringBuilder normal = new StringBuilder();
-
-    try{
-        Scanner sc = new Scanner(new File("reports.csv"));
-
-        while(sc.hasNextLine()){
-            String line = sc.nextLine();
-            if(line.isBlank()) continue;
-            String[] data = line.split(",");
-            String reportCity = data[3];
-            String status = data[5];
-            String priority = data[6];
-
-            if(reportCity.equalsIgnoreCase(city) && status.equalsIgnoreCase("pending")){
-
-                String formatted =
-                        "Name: " + data[0] +
-                        "\nMobile: " + data[1] +
-                        "\nInjury: " + data[2] +
-                        "\nStatus: " + status +
-                        "\nPriority: " + priority + "\n\n";
-
-                if(priority.equalsIgnoreCase("Emergency")){
-                    emergency.append(formatted);
-                } else {
-                    normal.append(formatted);
+    public static String getReportsForNGO(String city, String district, String state, String pincode){
+        StringBuilder emergency = new StringBuilder();
+        StringBuilder normal = new StringBuilder();
+        try{
+            BufferedReader br = new BufferedReader(new FileReader("reports.csv"));
+            String line;
+            while((line = br.readLine()) != null){
+                if(line.isBlank()) continue;
+                String[] data = line.split(",");
+                if(data.length < 11) continue;
+                String City = data[3].trim();
+                String District = data[4].trim();
+                String State = data[5].trim();
+                String Pincode = data[6].trim();
+                String status = data[7].trim();
+                String priority = data[8].trim();
+                if(!status.equalsIgnoreCase("Pending")) continue;
+                boolean match = false;
+                if(City.equalsIgnoreCase(city.trim())) match = true;
+                else if(Pincode.equals(pincode.trim())) match = true;
+                else if(District.equalsIgnoreCase(district.trim())) match = true;
+                else if(State.equalsIgnoreCase(state.trim())) match = true;
+                if(match){
+                    String formatted =
+                            "Name: " + data[0] +
+                            "\nMobile: " + data[1] +
+                            "\nInjury: " + data[2] +
+                            "\nCity: " + City +
+                            "\nPriority: " + priority + "\n\n";
+                    if(priority.equalsIgnoreCase("Emergency")){
+                        emergency.append(formatted);
+                    }
+                    else{
+                        normal.append(formatted);
+                    }
                 }
             }
+            br.close();
         }
-
-        sc.close();
-
-    } catch(Exception e){
-        e.printStackTrace();
+        catch(Exception e){
+            e.printStackTrace();
+        }
+        return "Emergency Cases:\n" + emergency.toString()
+             + "\nNormal Cases:\n" + normal.toString();
     }
 
-    return "Emergency Cases:\n" + emergency.toString()
-         + "\n\nNormal Cases:\n" + normal.toString();
-    }
-
-    public static void resolveReport(String ngoName, String ngoMobile, String userNumber) {
-
+    public static void resolveReport(String ngoName, String ngoMobile, String userNumber){
         try {
             BufferedReader br = new BufferedReader(new FileReader("reports.csv"));
             StringBuilder updated = new StringBuilder();
             String line;
-
-            while ((line = br.readLine()) != null) {
-
-                if (line.isBlank()) continue;
-
+            while((line = br.readLine()) != null){
+                if(line.isBlank()) continue;
                 String[] data = line.split(",");
-
-                if (data[1].equalsIgnoreCase(userNumber) && data[5].equalsIgnoreCase("Pending")) {
-
-                    data[5] = "Resolved";
-                    data[7] = ngoName;
-                    data[8] = ngoMobile;
+                if(data.length < 11) continue;
+                if(data[1].trim().equals(userNumber.trim()) && data[7].equalsIgnoreCase("Pending")){
+                    data[7] = "Resolved";
+                    data[9] = ngoName;
+                    data[10] = ngoMobile;
                 }
-
                 updated.append(String.join(",", data)).append("\n");
             }
-
             br.close();
-
             FileWriter fw = new FileWriter("reports.csv");
             fw.write(updated.toString());
             fw.close();
-
-        } catch (IOException e) {
+        }
+        catch(IOException e){
             e.printStackTrace();
         }
     }
